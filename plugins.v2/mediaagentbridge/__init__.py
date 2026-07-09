@@ -26,7 +26,7 @@ class MediaAgentBridge(_PluginBase):
     plugin_name = "Media Agent 迁移桥"
     plugin_desc = "为 Media Agent 提供 MoviePilot 只读迁移快照和增量同步端点。"
     plugin_icon = "sync.png"
-    plugin_version = "0.1.2"
+    plugin_version = "0.1.3"
     plugin_author = "chenbstack"
     author_url = "https://github.com/chenbstack"
     plugin_config_prefix = "mediaagentbridge_"
@@ -42,24 +42,30 @@ class MediaAgentBridge(_PluginBase):
     def init_plugin(self, config: dict = None):
         config = config or {}
         self._enabled = bool(config.get("enabled"))
-        self._bridge_token = ""
+        self._bridge_token = str(config.get("bridge_token") or "").strip()
         self._generated_bridge_token = ""
         self._bridge_token_hash = str(config.get("bridge_token_hash") or "")
         self._include_sensitive_default = bool(config.get("include_sensitive_default"))
 
-        plain_token = str(config.get("bridge_token") or "").strip()
         reset_bridge_token = bool(config.get("reset_bridge_token"))
-        token_to_hash = plain_token
-        if self._enabled and (reset_bridge_token or not self._bridge_token_hash) and not token_to_hash:
+        token_to_hash = self._bridge_token
+        if self._enabled and (reset_bridge_token or not token_to_hash):
             token_to_hash = generate_bridge_token()
+            self._bridge_token = token_to_hash
             self._generated_bridge_token = token_to_hash
         if token_to_hash:
-            self._bridge_token_hash = hash_bridge_token(token_to_hash)
-            updated = dict(config)
-            updated["bridge_token"] = ""
-            updated["bridge_token_hash"] = self._bridge_token_hash
-            updated["reset_bridge_token"] = False
-            self.update_config(updated)
+            next_hash = hash_bridge_token(token_to_hash)
+            self._bridge_token_hash = next_hash
+            if (
+                reset_bridge_token
+                or str(config.get("bridge_token") or "").strip() != token_to_hash
+                or str(config.get("bridge_token_hash") or "") != next_hash
+            ):
+                updated = dict(config)
+                updated["bridge_token"] = token_to_hash
+                updated["bridge_token_hash"] = self._bridge_token_hash
+                updated["reset_bridge_token"] = False
+                self.update_config(updated)
         elif reset_bridge_token:
             updated = dict(config)
             updated["reset_bridge_token"] = False
@@ -153,7 +159,7 @@ class MediaAgentBridge(_PluginBase):
                                         "props": {
                                             "model": "bridge_token",
                                             "label": "桥接 Token",
-                                            "placeholder": "留空自动生成；保存后只保留哈希",
+                                            "placeholder": "留空自动生成；保存后会显示在设置和详情中",
                                         },
                                     }
                                 ],
@@ -182,7 +188,7 @@ class MediaAgentBridge(_PluginBase):
             }
         ], {
             "enabled": False,
-            "bridge_token": "",
+            "bridge_token": self._bridge_token,
             "bridge_token_hash": "",
             "generated_bridge_token": self._generated_bridge_token,
             "reset_bridge_token": False,
@@ -190,7 +196,7 @@ class MediaAgentBridge(_PluginBase):
         }
 
     def get_page(self) -> List[dict]:
-        if not self._generated_bridge_token:
+        if not self._bridge_token:
             return []
         return [
             {
@@ -202,11 +208,11 @@ class MediaAgentBridge(_PluginBase):
                 "content": [
                     {
                         "component": "div",
-                        "text": "桥接 Token 只在本次生成后显示一次；丢失后请在配置中重新生成。",
+                        "text": "Media Agent 迁移时使用下面的桥接 Token。",
                     },
                     {
                         "component": "code",
-                        "text": self._generated_bridge_token,
+                        "text": self._bridge_token,
                     },
                 ],
             },
@@ -270,6 +276,7 @@ class MediaAgentBridge(_PluginBase):
 
     def revoke(self, x_media_agent_bridge_token: str = Header(None, alias="X-Media-Agent-Bridge-Token")) -> Dict[str, Any]:
         self.__authorize(x_media_agent_bridge_token)
+        self._bridge_token = ""
         self._bridge_token_hash = ""
         self._generated_bridge_token = ""
         self.update_config({

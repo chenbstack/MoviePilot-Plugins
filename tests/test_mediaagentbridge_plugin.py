@@ -74,49 +74,51 @@ class MediaAgentBridgePluginTest(unittest.TestCase):
         plugin.init_plugin({"enabled": True, "bridge_token": "plain-token"})
 
         self.assertTrue(plugin.get_state())
-        self.assertEqual(plugin._bridge_token, "")
+        self.assertEqual(plugin._bridge_token, "plain-token")
         self.assertRegex(plugin._bridge_token_hash, r"^[0-9a-f]{64}$")
         self.assertIsNotNone(plugin.saved_config)
-        self.assertEqual(plugin.saved_config["bridge_token"], "")
+        self.assertEqual(plugin.saved_config["bridge_token"], "plain-token")
         self.assertEqual(plugin.saved_config["bridge_token_hash"], plugin._bridge_token_hash)
 
-    def test_init_plugin_auto_generates_bridge_token_when_missing(self):
+    def test_init_plugin_auto_generates_and_persists_bridge_token_when_missing(self):
         module = load_plugin_module()
         plugin = module.MediaAgentBridge()
 
         plugin.init_plugin({"enabled": True})
 
         self.assertTrue(plugin.get_state())
-        self.assertRegex(plugin._generated_bridge_token, r"^[A-Za-z0-9_-]{40,}$")
-        self.assertTrue(module.verify_bridge_token(plugin._generated_bridge_token, plugin._bridge_token_hash))
-        self.assertEqual(plugin.saved_config["bridge_token"], "")
+        self.assertRegex(plugin._bridge_token, r"^[A-Za-z0-9_-]{40,}$")
+        self.assertTrue(module.verify_bridge_token(plugin._bridge_token, plugin._bridge_token_hash))
+        self.assertEqual(plugin.saved_config["bridge_token"], plugin._bridge_token)
         self.assertEqual(plugin.saved_config["bridge_token_hash"], plugin._bridge_token_hash)
         self.assertFalse(plugin.saved_config["reset_bridge_token"])
-        self.assertNotIn(plugin._generated_bridge_token, str(plugin.saved_config))
 
-    def test_generated_bridge_token_is_shown_on_plugin_page_once(self):
+    def test_bridge_token_is_shown_on_form_model_and_plugin_page(self):
         module = load_plugin_module()
         plugin = module.MediaAgentBridge()
 
-        plugin.init_plugin({"enabled": True})
+        plugin.init_plugin({"enabled": True, "bridge_token": "visible-token"})
 
-        self.assertIn(plugin._generated_bridge_token, str(plugin.get_page()))
+        _, model = plugin.get_form()
+
+        self.assertEqual(model["bridge_token"], "visible-token")
+        self.assertIn("visible-token", str(plugin.get_page()))
 
     def test_init_plugin_regenerates_bridge_token_when_requested(self):
         module = load_plugin_module()
         plugin = module.MediaAgentBridge()
-        old_hash = module.hash_bridge_token("old-token")
 
         plugin.init_plugin({
             "enabled": True,
-            "bridge_token_hash": old_hash,
+            "bridge_token": "old-token",
+            "bridge_token_hash": module.hash_bridge_token("old-token"),
             "reset_bridge_token": True,
         })
 
-        self.assertTrue(plugin._generated_bridge_token)
-        self.assertNotEqual(plugin._generated_bridge_token, "old-token")
-        self.assertTrue(module.verify_bridge_token(plugin._generated_bridge_token, plugin._bridge_token_hash))
-        self.assertNotEqual(plugin._bridge_token_hash, old_hash)
+        self.assertTrue(plugin._bridge_token)
+        self.assertNotEqual(plugin._bridge_token, "old-token")
+        self.assertTrue(module.verify_bridge_token(plugin._bridge_token, plugin._bridge_token_hash))
+        self.assertEqual(plugin.saved_config["bridge_token"], plugin._bridge_token)
         self.assertFalse(plugin.saved_config["reset_bridge_token"])
 
     def test_get_api_registers_bridge_routes_without_moviepilot_auth(self):
