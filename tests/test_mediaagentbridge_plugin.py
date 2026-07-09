@@ -80,7 +80,46 @@ class MediaAgentBridgePluginTest(unittest.TestCase):
         self.assertEqual(plugin.saved_config["bridge_token"], "")
         self.assertEqual(plugin.saved_config["bridge_token_hash"], plugin._bridge_token_hash)
 
-    def test_get_api_registers_bridge_routes_with_apikey_auth(self):
+    def test_init_plugin_auto_generates_bridge_token_when_missing(self):
+        module = load_plugin_module()
+        plugin = module.MediaAgentBridge()
+
+        plugin.init_plugin({"enabled": True})
+
+        self.assertTrue(plugin.get_state())
+        self.assertRegex(plugin._generated_bridge_token, r"^[A-Za-z0-9_-]{40,}$")
+        self.assertTrue(module.verify_bridge_token(plugin._generated_bridge_token, plugin._bridge_token_hash))
+        self.assertEqual(plugin.saved_config["bridge_token"], "")
+        self.assertEqual(plugin.saved_config["bridge_token_hash"], plugin._bridge_token_hash)
+        self.assertFalse(plugin.saved_config["reset_bridge_token"])
+        self.assertNotIn(plugin._generated_bridge_token, str(plugin.saved_config))
+
+    def test_generated_bridge_token_is_shown_on_plugin_page_once(self):
+        module = load_plugin_module()
+        plugin = module.MediaAgentBridge()
+
+        plugin.init_plugin({"enabled": True})
+
+        self.assertIn(plugin._generated_bridge_token, str(plugin.get_page()))
+
+    def test_init_plugin_regenerates_bridge_token_when_requested(self):
+        module = load_plugin_module()
+        plugin = module.MediaAgentBridge()
+        old_hash = module.hash_bridge_token("old-token")
+
+        plugin.init_plugin({
+            "enabled": True,
+            "bridge_token_hash": old_hash,
+            "reset_bridge_token": True,
+        })
+
+        self.assertTrue(plugin._generated_bridge_token)
+        self.assertNotEqual(plugin._generated_bridge_token, "old-token")
+        self.assertTrue(module.verify_bridge_token(plugin._generated_bridge_token, plugin._bridge_token_hash))
+        self.assertNotEqual(plugin._bridge_token_hash, old_hash)
+        self.assertFalse(plugin.saved_config["reset_bridge_token"])
+
+    def test_get_api_registers_bridge_routes_without_moviepilot_auth(self):
         module = load_plugin_module()
         plugin = module.MediaAgentBridge()
 
@@ -92,7 +131,8 @@ class MediaAgentBridgePluginTest(unittest.TestCase):
         self.assertEqual(route_by_path["/snapshot"]["methods"], ["GET"])
         self.assertEqual(route_by_path["/export"]["methods"], ["GET"])
         self.assertEqual(route_by_path["/revoke"]["methods"], ["POST"])
-        self.assertTrue(all(route["auth"] == "apikey" for route in routes))
+        self.assertTrue(all(route["allow_anonymous"] is True for route in routes))
+        self.assertTrue(all("auth" not in route for route in routes))
 
 
 if __name__ == "__main__":

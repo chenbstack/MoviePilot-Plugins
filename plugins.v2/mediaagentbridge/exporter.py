@@ -2,6 +2,7 @@ import base64
 import hashlib
 import hmac
 import json
+import secrets
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
@@ -97,6 +98,10 @@ def stable_hash(value: Any, include_sensitive: bool = False) -> str:
 def hash_bridge_token(token: str) -> str:
     token = token or ""
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def generate_bridge_token() -> str:
+    return secrets.token_urlsafe(32)
 
 
 def verify_bridge_token(provided: str, configured_hash: str) -> bool:
