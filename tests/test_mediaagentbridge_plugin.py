@@ -80,7 +80,7 @@ class MediaAgentBridgePluginTest(unittest.TestCase):
         self.assertEqual(plugin.saved_config["bridge_token"], "")
         self.assertEqual(plugin.saved_config["bridge_token_hash"], plugin._bridge_token_hash)
 
-    def test_get_api_registers_bridge_routes_with_bearer_auth(self):
+    def test_get_api_registers_bridge_routes_with_apikey_auth(self):
         module = load_plugin_module()
         plugin = module.MediaAgentBridge()
 
@@ -92,7 +92,7 @@ class MediaAgentBridgePluginTest(unittest.TestCase):
         self.assertEqual(route_by_path["/snapshot"]["methods"], ["GET"])
         self.assertEqual(route_by_path["/export"]["methods"], ["GET"])
         self.assertEqual(route_by_path["/revoke"]["methods"], ["POST"])
-        self.assertTrue(all(route["auth"] == "bear" for route in routes))
+        self.assertTrue(all(route["auth"] == "apikey" for route in routes))
 
 
 if __name__ == "__main__":

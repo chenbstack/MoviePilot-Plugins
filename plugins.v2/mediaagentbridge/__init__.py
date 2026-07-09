@@ -26,7 +26,7 @@ class MediaAgentBridge(_PluginBase):
     plugin_name = "Media Agent 迁移桥"
     plugin_desc = "为 Media Agent 提供 MoviePilot 只读迁移快照和增量同步端点。"
     plugin_icon = "sync.png"
-    plugin_version = "0.1.0"
+    plugin_version = "0.1.1"
     plugin_author = "chenbstack"
     author_url = "https://github.com/chenbstack"
     plugin_config_prefix = "mediaagentbridge_"
@@ -66,7 +66,7 @@ class MediaAgentBridge(_PluginBase):
                 "path": "/ping",
                 "endpoint": self.ping,
                 "methods": ["GET"],
-                "auth": "bear",
+                "auth": "apikey",
                 "summary": "Media Agent 迁移桥检测",
                 "description": "检测插件状态、协议版本和可导出类型。",
             },
@@ -74,7 +74,7 @@ class MediaAgentBridge(_PluginBase):
                 "path": "/snapshot",
                 "endpoint": self.snapshot,
                 "methods": ["GET"],
-                "auth": "bear",
+                "auth": "apikey",
                 "summary": "Media Agent 迁移快照",
                 "description": "返回可迁移对象类型和数量。",
             },
@@ -82,7 +82,7 @@ class MediaAgentBridge(_PluginBase):
                 "path": "/export",
                 "endpoint": self.export,
                 "methods": ["GET"],
-                "auth": "bear",
+                "auth": "apikey",
                 "summary": "Media Agent 分页导出",
                 "description": "按类型分页导出迁移数据，默认脱敏。",
             },
@@ -90,7 +90,7 @@ class MediaAgentBridge(_PluginBase):
                 "path": "/revoke",
                 "endpoint": self.revoke,
                 "methods": ["POST"],
-                "auth": "bear",
+                "auth": "apikey",
                 "summary": "吊销 Media Agent 迁移授权",
                 "description": "清除桥接 token，后续需重新配置后才能同步。",
             },
