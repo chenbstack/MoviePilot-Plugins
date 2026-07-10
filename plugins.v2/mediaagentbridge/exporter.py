@@ -142,6 +142,21 @@ def exported_at() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def row_updated_at(row: Any) -> Optional[datetime]:
+    data = to_plain_data(row, include_sensitive=True)
+    if not isinstance(data, dict):
+        return None
+    for key in ("updated_at", "update_time", "modified_at", "modified", "date", "created_at"):
+        value = data.get(key)
+        if not value:
+            continue
+        try:
+            return datetime.fromisoformat(str(value).replace("Z", "+00:00")).astimezone(timezone.utc)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
 def build_export_item(source_type: str, row: Any, index: int, include_sensitive: bool = False) -> Dict[str, Any]:
     data = to_plain_data(row, include_sensitive=include_sensitive)
     if not isinstance(data, dict):
@@ -160,8 +175,15 @@ def build_export_page(
     cursor: str = "",
     limit: int = 200,
     include_sensitive: bool = False,
+    updated_since: Optional[str] = None,
 ) -> Dict[str, Any]:
     all_rows: List[Any] = list(rows or [])
+    if updated_since:
+        try:
+            cutoff = datetime.fromisoformat(updated_since.replace("Z", "+00:00")).astimezone(timezone.utc)
+            all_rows = [row for row in all_rows if (row_updated_at(row) or cutoff) >= cutoff]
+        except ValueError:
+            pass
     safe_limit = min(max(int(limit or 200), 1), 1000)
     offset = decode_cursor(cursor)
     page_rows = all_rows[offset:offset + safe_limit]

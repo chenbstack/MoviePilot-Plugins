@@ -259,6 +259,7 @@ class MediaAgentBridge(_PluginBase):
         source_type: str = Query("subscriptions", alias="type"),
         cursor: str = Query("", description="上一页返回的 next_cursor"),
         limit: int = Query(200, ge=1, le=1000),
+        updated_since: str = Query("", description="仅导出该 UTC 时间之后更新的数据"),
         include_sensitive: bool = Query(False),
         x_media_agent_bridge_token: str = Header(None, alias="X-Media-Agent-Bridge-Token"),
     ) -> Dict[str, Any]:
@@ -272,6 +273,7 @@ class MediaAgentBridge(_PluginBase):
             cursor=cursor,
             limit=limit,
             include_sensitive=allowed_sensitive,
+            updated_since=updated_since or None,
         )
 
     def revoke(self, x_media_agent_bridge_token: str = Header(None, alias="X-Media-Agent-Bridge-Token")) -> Dict[str, Any]:
