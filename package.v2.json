@@ -25,11 +25,12 @@
     "name": "Media Agent 迁移桥",
     "description": "为 Media Agent 提供 MoviePilot 只读迁移快照、分页导出和增量同步基础能力。",
     "labels": "迁移,备份",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "icon": "sync.png",
     "author": "chenbstack",
     "level": 1,
     "history": {
+      "v0.1.4": "迁移桥新增按更新时间过滤导出能力，支持时间增量同步",
       "v0.1.3": "桥接 Token 在设置和详情页持久显示，便于重复迁移使用",
       "v0.1.2": "桥接端点改为插件自认证并支持自动生成桥接 Token",
       "v0.1.1": "桥接端点改为 MP API key 鉴权，便于 Media Agent 迁移向导使用密钥同步",
